@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e5e7eb;
+        }
+        .message-bubble {
+            max-width: 75%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+        .message-sent {
+            background-color: #3b82f6;
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 5px;
+        }
+        .message-received {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            align-self: flex-start;
+            border-top-left-radius: 5px;
+        }
+        .chat-container {
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+        .user-list-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            background-color: #f3f4f6;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online {
+            background-color: #22c55e;
+        }
+        .status-offline {
+            background-color: #9ca3af;
+        }
+        .custom-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center p-4 min-h-screen">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row h-[90vh]">
+
+        <!-- Left Sidebar - User List -->
+        <div class="md:w-1/4 p-4 border-r border-gray-200 bg-gray-50 flex flex-col rounded-l-2xl">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Online Users</h2>
+            <div id="user-list" class="flex-grow overflow-y-auto">
+                <!-- User list items will be rendered here -->
+            </div>
+            <div class="mt-4 p-2 bg-gray-100 rounded-lg">
+                <span class="text-sm text-gray-500 block">Your User ID:</span>
+                <span id="user-id-display" class="font-mono text-xs break-all text-gray-700">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Right Main Chat Area -->
+        <div class="md:w-3/4 flex flex-col p-4 relative rounded-r-2xl">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800">Global Chat</h1>
+                <div class="flex space-x-2">
+                    <button id="summarize-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors text-sm">
+                        ✨ Summarize Chat
+                    </button>
+                    <button id="auth-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors text-sm">
+                        Login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div id="chat-messages" class="chat-container flex-grow overflow-y-auto">
+                <!-- Messages will be rendered here -->
+                <div id="loading-spinner" class="flex items-center justify-center h-full text-gray-500">
+                    <svg class="animate-spin h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="ml-2">Loading messages...</span>
+                </div>
+            </div>
+
+            <!-- Message Input Area -->
+            <div id="input-area" class="mt-4 flex space-x-2">
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow p-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <button id="send-button" class="bg-blue-500 text-white py-3 px-6 rounded-full hover:bg-blue-600 transition-colors shadow-md disabled:bg-blue-300" disabled>
+                    Send
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Custom Modal for Alerts/Confirmations -->
+    <div id="custom-modal" class="custom-modal-backdrop">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center">
+            <h3 class="text-lg font-bold mb-2 text-gray-800" id="modal-title"></h3>
+            <p class="text-gray-600 mb-4" id="modal-message"></p>
+            <button id="modal-ok-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">OK</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, query, getDocs, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Set Firebase debug logging
+        setLogLevel('debug');
+
+        // Global variables for Firebase configuration
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const API_KEY = "";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+
+        let app, db, auth;
+        let userId = null;
+        let userName = null;
+        let isAuthReady = false;
+
+        const chatMessagesEl = document.getElementById('chat-messages');
+        const messageInputEl = document.getElementById('message-input');
+        const sendButtonEl = document.getElementById('send-button');
+        const authButtonEl = document.getElementById('auth-button');
+        const summarizeButtonEl = document.getElementById('summarize-button');
+        const userListEl = document.getElementById('user-list');
+        const userIdDisplayEl = document.getElementById('user-id-display');
+        const loadingSpinnerEl = document.getElementById('loading-spinner');
+
+        // Custom modal elements
+        const customModal = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalOkButton = document.getElementById('modal-ok-button');
+
+        // Function to show custom modal
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            customModal.style.display = 'flex';
+        }
+
+        modalOkButton.addEventListener('click', () => {
+            customModal.style.display = 'none';
+        });
+
+        // Initialize Google Auth Provider
+        const googleProvider = new GoogleAuthProvider();
+
+        const authUser = async () => {
+            try {
+                // Use Google Sign-In with a pop-up
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                console.error("Firebase auth error:", error);
+                // Handle pop-up closed by user
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    showModal("Authentication Failed", "Could not sign in. Please try refreshing the page.");
+                }
+            }
+        };
+
+        const updateStatus = async (status) => {
+            if (userId && userName) {
+                const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userId);
+                try {
+                    await setDoc(userDocRef, {
+                        uid: userId,
+                        name: userName,
+                        status: status,
+                        lastActive: new Date(),
+                    }, { merge: true });
+                } catch (e) {
+                    console.error("Error updating user status: ", e);
+                }
+            }
+        };
+
+        const generateGeminiResponse = async (prompt) => {
+            let retryDelay = 1000;
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                    };
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.status === 429) {
+                        console.warn('API rate limit exceeded. Retrying...');
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        retryDelay *= 2;
+                        continue;
+                    }
+
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                        return text;
+                    }
+                    return "Sorry, I couldn't generate a response.";
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    return "An error occurred while contacting the AI.";
+                }
+            }
+            return "Failed to get a response after multiple retries.";
+        };
+
+        const addMessage = async () => {
+            const messageText = messageInputEl.value.trim();
+            if (messageText === "" || !userId) {
+                return;
+            }
+
+            const messagesCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+
+            try {
+                if (messageText.startsWith('@ai ')) {
+                    const userPrompt = messageText.substring(4);
+                    
+                    await addDoc(messagesCollectionRef, {
+                        senderId: userId,
+                        senderName: userName,
+                        text: userPrompt,
+                        timestamp: new Date(),
+                    });
+                    
+                    const typingMessageRef = await addDoc(messagesCollectionRef, {
+                        senderId: 'gemini-bot',
+                        senderName: '✨AI Assistant✨',
+                        text: 'Thinking...',
+                        timestamp: new Date(),
+                        isTyping: true
+                    });
+                    
+                    const aiResponse = await generateGeminiResponse(userPrompt);
+
+                    await setDoc(typingMessageRef, {
+                        senderId: 'gemini-bot',
+                        senderName: '✨AI Assistant✨',
+                        text: aiResponse,
+                        timestamp: new Date(),
+                        isTyping: false
+                    }, { merge: true });
+
+                } else {
+                    await addDoc(messagesCollectionRef, {
+                        senderId: userId,
+                        senderName: userName,
+                        text: messageText,
+                        timestamp: new Date(),
+                    });
+                }
+                messageInputEl.value = '';
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showModal("Sending Failed", "Could not send the message. Please check your connection.");
+            }
+        };
+
+        const summarizeChat = async () => {
+            if (!userId) {
+                showModal("Login Required", "Please log in to use this feature.");
+                return;
+            }
+            
+            const messagesCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+            
+            try {
+                const q = query(messagesCollectionRef, limit(20));
+                const querySnapshot = await getDocs(q);
+                
+                const messages = [];
+                querySnapshot.forEach(doc => {
+                    messages.push(doc.data());
+                });
+
+                if (messages.length === 0) {
+                    showModal("No Messages", "There are no messages to summarize yet.");
+                    return;
+                }
+                
+                const chatHistory = messages.map(msg => `${msg.senderName}: ${msg.text}`).join('\n');
+                const prompt = `Summarize the following chat conversation in a single paragraph, highlighting the main topics and key points:\n\n${chatHistory}`;
+
+                const typingMessageRef = await addDoc(messagesCollectionRef, {
+                    senderId: 'gemini-bot',
+                    senderName: '✨AI Assistant✨',
+                    text: 'Summarizing chat...',
+                    timestamp: new Date(),
+                    isTyping: true
+                });
+
+                const summary = await generateGeminiResponse(prompt);
+
+                await setDoc(typingMessageRef, {
+                    senderId: 'gemini-bot',
+                    senderName: '✨AI Assistant✨',
+                    text: summary,
+                    timestamp: new Date(),
+                    isTyping: false
+                }, { merge: true });
+
+            } catch (error) {
+                console.error("Error summarizing chat:", error);
+                showModal("Error", "Could not summarize the chat. Please try again.");
+            }
+        };
+
+        const renderMessages = (messages) => {
+            chatMessagesEl.innerHTML = '';
+            const sortedMessages = messages.sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate());
+            
+            sortedMessages.forEach(msg => {
+                const messageEl = document.createElement('div');
+                const isMyMessage = msg.senderId === userId;
+                const isGeminiMessage = msg.senderId === 'gemini-bot';
+                const bubbleClass = isMyMessage ? 'message-sent' : (isGeminiMessage ? 'bg-purple-100 text-purple-800' : 'message-received');
+                const alignmentClass = isMyMessage ? 'self-end' : 'self-start';
+
+                messageEl.className = `message-bubble ${bubbleClass} ${alignmentClass} shadow-md`;
+                messageEl.innerHTML = `
+                    <div class="text-xs font-semibold ${isMyMessage ? 'text-blue-200' : 'text-gray-500'} mb-1">${isMyMessage ? 'You' : msg.senderName}</div>
+                    <div>${msg.text}</div>
+                    <div class="text-xs mt-1 text-right ${isMyMessage ? 'text-blue-200' : 'text-gray-500'}">${new Date(msg.timestamp.seconds * 1000).toLocaleTimeString()}</div>
+                `;
+                chatMessagesEl.appendChild(messageEl);
+            });
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        };
+
+        const renderUserList = (users) => {
+            userListEl.innerHTML = '';
+            const sortedUsers = users.sort((a, b) => {
+                if (a.status === 'online' && b.status === 'offline') return -1;
+                if (a.status === 'offline' && b.status === 'online') return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            sortedUsers.forEach(user => {
+                const userEl = document.createElement('div');
+                const statusClass = user.status === 'online' ? 'status-online' : 'status-offline';
+                const textClass = user.status === 'online' ? 'text-gray-800 font-medium' : 'text-gray-500';
+
+                userEl.className = 'user-list-item';
+                userEl.innerHTML = `
+                    <span class="status-indicator ${statusClass}"></span>
+                    <span class="${textClass}">${user.name}</span>
+                `;
+                userListEl.appendChild(userEl);
+            });
+        };
+        
+        // Initial setup and listeners
+        window.onload = function() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (e) {
+                console.error("Failed to initialize Firebase:", e);
+                showModal("Initialization Error", "Failed to initialize Firebase services. Please check the console for details.");
+                return;
+            }
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userName = user.displayName || user.email || `User-${userId.substring(0, 4)}`;
+                    isAuthReady = true;
+                    authButtonEl.textContent = 'Logout';
+                    sendButtonEl.disabled = false;
+                    summarizeButtonEl.disabled = false;
+                    userIdDisplayEl.textContent = userId;
+                    updateStatus('online');
+
+                    // Set up real-time listeners only after authentication
+                    const messagesCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+                    onSnapshot(messagesCollectionRef, (querySnapshot) => {
+                        const messages = [];
+                        querySnapshot.forEach((doc) => {
+                            messages.push({ id: doc.id, ...doc.data() });
+                        });
+                        loadingSpinnerEl.style.display = 'none';
+                        renderMessages(messages);
+                    }, (error) => {
+                        console.error("Error getting messages: ", error);
+                        showModal("Error", "Failed to load messages. Please check your connection.");
+                    });
+                    
+                    const usersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+                    onSnapshot(usersCollectionRef, (querySnapshot) => {
+                        const users = [];
+                        querySnapshot.forEach((doc) => {
+                            users.push({ id: doc.id, ...doc.data() });
+                        });
+                        renderUserList(users);
+                    }, (error) => {
+                        console.error("Error getting users: ", error);
+                    });
+
+                } else {
+                    userId = null;
+                    userName = null;
+                    isAuthReady = true;
+                    authButtonEl.textContent = 'Login with Google';
+                    sendButtonEl.disabled = true;
+                    summarizeButtonEl.disabled = true;
+                    userIdDisplayEl.textContent = 'Not logged in';
+                    chatMessagesEl.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Please login to chat.</div>';
+                    userListEl.innerHTML = '';
+                }
+            });
+
+            authButtonEl.addEventListener('click', () => {
+                if (auth.currentUser) {
+                    updateStatus('offline').then(() => signOut(auth));
+                } else {
+                    authUser();
+                }
+            });
+            
+            summarizeButtonEl.addEventListener('click', summarizeChat);
+
+            sendButtonEl.addEventListener('click', addMessage);
+            messageInputEl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addMessage();
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (auth.currentUser) {
+                    updateStatus('offline');
+                }
+            });
+        };
+    </script>
+</body>
+</html>
