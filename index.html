@@ -9,7 +9,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #e5e7eb;
+            transition: background-color 0.3s ease;
         }
         .message-bubble {
             max-width: 75%;
@@ -17,6 +17,7 @@
             border-radius: 20px;
             margin-bottom: 8px;
             word-wrap: break-word;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .message-sent {
             background-color: #3b82f6;
@@ -43,7 +44,7 @@
             padding: 8px 12px;
             border-radius: 12px;
             margin-bottom: 8px;
-            background-color: #f3f4f6;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .status-indicator {
             width: 10px;
@@ -69,19 +70,70 @@
             align-items: center;
             z-index: 1000;
         }
+        /* Tailwind's dark class is applied directly to the body for reliability */
+        body.dark .bg-gray-100 {
+            background-color: #111827;
+        }
+        body.dark .bg-white {
+            background-color: #1f2937;
+        }
+        body.dark .bg-gray-50 {
+            background-color: #111827;
+        }
+        body.dark .border-gray-200 {
+            border-color: #374151;
+        }
+        body.dark .text-gray-800 {
+            color: #d1d5db;
+        }
+        body.dark .bg-gray-100 {
+            background-color: #1f2937;
+        }
+        body.dark .text-gray-500 {
+            color: #9ca3af;
+        }
+        body.dark .text-gray-700 {
+            color: #d1d5db;
+        }
+        body.dark .message-received {
+            background-color: #374151;
+            color: #e5e7eb;
+        }
+        body.dark .message-received .text-gray-500 {
+            color: #9ca3af;
+        }
+        body.dark .bg-gray-200 {
+            background-color: #374151;
+        }
+        body.dark .text-gray-800 {
+            color: #d1d5db;
+        }
+        body.dark .bg-gray-700 {
+            background-color: #4b5563;
+        }
+        body.dark .text-gray-900 {
+            color: #e5e7eb;
+        }
+        body.dark .text-white {
+            color: #e5e7eb;
+        }
+        body.dark .bg-purple-100 {
+            background-color: #4c1d95;
+            color: #e9d5ff;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col items-center justify-center p-4 min-h-screen">
 
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row h-[90vh]">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row h-[90vh] transition-colors duration-300">
 
         <!-- Left Sidebar - User List -->
-        <div class="md:w-1/4 p-4 border-r border-gray-200 bg-gray-50 flex flex-col rounded-l-2xl">
+        <div class="md:w-1/4 p-4 border-r border-gray-200 bg-gray-50 flex flex-col rounded-l-2xl transition-colors duration-300">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Online Users</h2>
             <div id="user-list" class="flex-grow overflow-y-auto">
                 <!-- User list items will be rendered here -->
             </div>
-            <div class="mt-4 p-2 bg-gray-100 rounded-lg">
+            <div class="mt-4 p-2 bg-gray-100 rounded-lg transition-colors duration-300">
                 <span class="text-sm text-gray-500 block">Your User ID:</span>
                 <span id="user-id-display" class="font-mono text-xs break-all text-gray-700">Loading...</span>
             </div>
@@ -90,10 +142,13 @@
         <!-- Right Main Chat Area -->
         <div class="md:w-3/4 flex flex-col p-4 relative rounded-r-2xl">
             <div class="flex items-center justify-between pb-4 border-b border-gray-200">
-                <h1 class="text-2xl font-bold text-gray-800">Global Chat</h1>
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition-colors">दाजु भाइको गफ</h1>
                 <div class="flex space-x-2">
-                    <button id="summarize-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors text-sm">
+                    <button id="summarize-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors text-sm disabled:bg-indigo-300 disabled:cursor-not-allowed">
                         ✨ Summarize Chat
+                    </button>
+                    <button id="theme-toggle-button" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-full shadow-md transition-colors text-sm">
+                        ☀️
                     </button>
                     <button id="auth-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors text-sm">
                         Login
@@ -115,8 +170,8 @@
 
             <!-- Message Input Area -->
             <div id="input-area" class="mt-4 flex space-x-2">
-                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow p-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                <button id="send-button" class="bg-blue-500 text-white py-3 px-6 rounded-full hover:bg-blue-600 transition-colors shadow-md disabled:bg-blue-300" disabled>
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow p-3 rounded-full border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <button id="send-button" class="bg-blue-500 text-white py-3 px-6 rounded-full hover:bg-blue-600 transition-colors shadow-md disabled:bg-blue-300 disabled:cursor-not-allowed" disabled>
                     Send
                 </button>
             </div>
@@ -126,7 +181,7 @@
 
     <!-- Custom Modal for Alerts/Confirmations -->
     <div id="custom-modal" class="custom-modal-backdrop">
-        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center transition-colors duration-300">
             <h3 class="text-lg font-bold mb-2 text-gray-800" id="modal-title"></h3>
             <p class="text-gray-600 mb-4" id="modal-message"></p>
             <button id="modal-ok-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">OK</button>
@@ -135,14 +190,13 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, query, getDocs, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // Set Firebase debug logging
         setLogLevel('debug');
 
-        // Global variables for Firebase configuration
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -160,6 +214,7 @@
         const sendButtonEl = document.getElementById('send-button');
         const authButtonEl = document.getElementById('auth-button');
         const summarizeButtonEl = document.getElementById('summarize-button');
+        const themeToggleButton = document.getElementById('theme-toggle-button');
         const userListEl = document.getElementById('user-list');
         const userIdDisplayEl = document.getElementById('user-id-display');
         const loadingSpinnerEl = document.getElementById('loading-spinner');
@@ -180,22 +235,6 @@
         modalOkButton.addEventListener('click', () => {
             customModal.style.display = 'none';
         });
-
-        // Initialize Google Auth Provider
-        const googleProvider = new GoogleAuthProvider();
-
-        const authUser = async () => {
-            try {
-                // Use Google Sign-In with a pop-up
-                await signInWithPopup(auth, googleProvider);
-            } catch (error) {
-                console.error("Firebase auth error:", error);
-                // Handle pop-up closed by user
-                if (error.code !== 'auth/popup-closed-by-user') {
-                    showModal("Authentication Failed", "Could not sign in. Please try refreshing the page.");
-                }
-            }
-        };
 
         const updateStatus = async (status) => {
             if (userId && userName) {
@@ -357,7 +396,7 @@
                 const messageEl = document.createElement('div');
                 const isMyMessage = msg.senderId === userId;
                 const isGeminiMessage = msg.senderId === 'gemini-bot';
-                const bubbleClass = isMyMessage ? 'message-sent' : (isGeminiMessage ? 'bg-purple-100 text-purple-800' : 'message-received');
+                const bubbleClass = isMyMessage ? 'message-sent' : (isGeminiMessage ? 'bg-purple-100 dark-bg-purple-900 text-purple-800 dark-text-purple-200' : 'message-received');
                 const alignmentClass = isMyMessage ? 'self-end' : 'self-start';
 
                 messageEl.className = `message-bubble ${bubbleClass} ${alignmentClass} shadow-md`;
@@ -392,9 +431,27 @@
                 userListEl.appendChild(userEl);
             });
         };
+
+        // Theme Toggle Logic
+        const isDarkMode = () => localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const applyTheme = (isDark) => {
+            if (isDark) {
+                document.body.classList.add('dark');
+                themeToggleButton.textContent = '🌙';
+                localStorage.theme = 'dark';
+            } else {
+                document.body.classList.remove('dark');
+                themeToggleButton.textContent = '☀️';
+                localStorage.theme = 'light';
+            }
+        };
+
+        themeToggleButton.addEventListener('click', () => {
+            applyTheme(!document.body.classList.contains('dark'));
+        });
         
         // Initial setup and listeners
-        window.onload = function() {
+        window.onload = async function() {
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -405,10 +462,25 @@
                 return;
             }
 
+            // Apply saved theme preference on load
+            applyTheme(isDarkMode());
+
+            // Authenticate the user on load
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase auth error:", error);
+                showModal("Authentication Failed", "Could not authenticate. Please try refreshing the page.");
+            }
+
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
-                    userName = user.displayName || user.email || `User-${userId.substring(0, 4)}`;
+                    userName = `User-${userId.substring(0, 4)}`;
                     isAuthReady = true;
                     authButtonEl.textContent = 'Logout';
                     sendButtonEl.disabled = false;
@@ -445,7 +517,7 @@
                     userId = null;
                     userName = null;
                     isAuthReady = true;
-                    authButtonEl.textContent = 'Login with Google';
+                    authButtonEl.textContent = 'Login';
                     sendButtonEl.disabled = true;
                     summarizeButtonEl.disabled = true;
                     userIdDisplayEl.textContent = 'Not logged in';
@@ -458,7 +530,7 @@
                 if (auth.currentUser) {
                     updateStatus('offline').then(() => signOut(auth));
                 } else {
-                    authUser();
+                    showModal('Authentication Not Available', 'Authentication is automatically handled for you. Please refresh the page if you are experiencing issues.');
                 }
             });
             
